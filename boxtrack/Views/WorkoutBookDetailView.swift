@@ -166,11 +166,10 @@ struct WorkoutBookDetailView: View {
                     existingBook: book
                 )
             }
-            .sheet(isPresented: $showStartWorkout) {
-                WorkoutSetupView(
-                    showActiveWorkout: .constant(false),
-                    preSelectedBook: book
-                )
+            .fullScreenCover(isPresented: $showStartWorkout) {
+                NavigationStack {
+                    WorkoutSetupViewWrapper(book: book)
+                }
             }
             .alert("Delete Workout Book", isPresented: $showDeleteAlert) {
                 Button("Cancel", role: .cancel) {}
@@ -180,6 +179,28 @@ struct WorkoutBookDetailView: View {
                 }
             } message: {
                 Text("Are you sure you want to delete \"\(book.name)\"? This cannot be undone.")
+            }
+        }
+    }
+}
+
+// MARK: - Wrapper to Handle Navigation
+struct WorkoutSetupViewWrapper: View {
+    @Environment(\.dismiss) var dismiss
+    let book: WorkoutBook
+    @State private var showActiveWorkout = false
+    
+    var body: some View {
+        WorkoutSetupView(
+            showActiveWorkout: $showActiveWorkout,
+            preSelectedBook: book
+        )
+        .sheet(isPresented: $showActiveWorkout) {
+            ActiveWorkoutView(viewModel: ActiveWorkoutViewModel())
+        }
+        .onChange(of: showActiveWorkout) { _, newValue in
+            if newValue {
+                dismiss() // Close setup when active workout opens
             }
         }
     }

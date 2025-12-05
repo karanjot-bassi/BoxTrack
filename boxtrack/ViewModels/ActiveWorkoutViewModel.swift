@@ -8,6 +8,7 @@
 import Foundation
 import Combine
 import FirebaseAuth
+import FirebaseFirestore
 
 @MainActor
 class ActiveWorkoutViewModel: ObservableObject {
@@ -28,19 +29,58 @@ class ActiveWorkoutViewModel: ObservableObject {
     private let userService = UserService.shared
     
     // MARK: - Load Workout
-    
-    func loadActiveWorkout() {
+
+    func loadActiveWorkout() async {
         guard let sessionId = UserDefaults.standard.string(forKey: "activeWorkoutSessionId") else {
+            print("❌ No session ID found")
             return
         }
         
-        // Only reset timer if this is a fresh workout (no exercises yet)
-        if exercises.isEmpty {
-            BoxingTimerManager.shared.resetForWorkout()
+        print("🔍 Loading session: \(sessionId)")
+        
+        isLoading = true
+        
+        do {
+            // Fetch the session directly by ID
+            let db = Firestore.firestore()
+            let document = try await db.collection("workoutSessions")
+                .document(sessionId)
+                .getDocument()
+            
+            guard let session = try? document.data(as: WorkoutSession.self) else {
+                print("❌ Session not found or couldn't decode")
+                isLoading = false
+                return
+            }
+            
+            print("✅ Session found!")
+            print("📊 Exercises in session: \(session.exercises.count)")
+            
+            // Load the exercises from the session
+            exercises = session.exercises
+            workoutName = session.workoutBookName ?? "Freestyle Workout"
+            workoutSession = session
+            
+            print("✅ Loaded \(exercises.count) exercises into ViewModel")
+            exercises.forEach { ex in
+                print("  - \(ex.name) (\(ex.category.rawValue))")
+            }
+            
+            // Only reset timer if this is a fresh workout (no logged sets yet)
+            let hasLoggedSets = exercises.contains { !$0.sets.isEmpty }
+            if !hasLoggedSets {
+                BoxingTimerManager.shared.resetForWorkout()
+            }
+            
+            startWorkoutTimer()
+            hasLoadedWorkout = true
+            
+        } catch {
+            print("❌ Error loading workout: \(error)")
+            showErrorAlert("Failed to load workout: \(error.localizedDescription)")
         }
         
-        startWorkoutTimer()
-        hasLoadedWorkout = true
+        isLoading = false
     }
     
     // MARK: - Workout Duration Timer

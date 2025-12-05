@@ -136,7 +136,7 @@ class WorkoutService {
     func getUserWorkoutBooks(userId: String) async throws -> [WorkoutBook] {
         let snapshot = try await db.collection(workoutBooksCollection)
             .whereField("userId", isEqualTo: userId)
-            .order(by: "createAt", descending: true)
+            .order(by: "createdAt", descending: true)
             .getDocuments()
         
         return snapshot.documents.compactMap { doc in

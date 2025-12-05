@@ -84,8 +84,11 @@ struct MainTabView: View {
         .onChange(of: showActiveWorkout) { oldValue, newValue in
             // When sheet closes (newValue = false), update button state
             if !newValue {
-                updateActiveWorkoutState()
-                refreshHomeView.toggle()
+                // Delay to avoid conflicts when starting new workout
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    updateActiveWorkoutState()
+                    refreshHomeView.toggle()
+                }
             }
         }
     }

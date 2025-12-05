@@ -146,7 +146,9 @@ struct ActiveWorkoutView: View {
         }
         .onAppear {
             if !viewModel.hasLoadedWorkout {
-                viewModel.loadActiveWorkout()
+                Task {
+                    await viewModel.loadActiveWorkout()
+                }
             }
         }
     }
