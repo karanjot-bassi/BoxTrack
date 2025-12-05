@@ -142,11 +142,9 @@ struct CreateWorkoutBookView: View {
                                 }
                                 .onMove { source, destination in
                                     exercises.move(fromOffsets: source, toOffset: destination)
-                                    updateExerciseOrder()
                                 }
                                 .onDelete { indexSet in
                                     exercises.remove(atOffsets: indexSet)
-                                    updateExerciseOrder()
                                 }
                             }
                             .listStyle(.plain)
@@ -203,9 +201,7 @@ struct CreateWorkoutBookView: View {
             }
             .sheet(isPresented: $showAddExercise) {
                 AddExerciseToBookView { exercise in
-                    var newExercise = exercise
-                    newExercise.order = exercises.count
-                    exercises.append(newExercise)
+                    exercises.append(exercise)
                 }
             }
             .sheet(item: $editingExerciseIndex) { index in
@@ -214,7 +210,6 @@ struct CreateWorkoutBookView: View {
                         onAdd: { updatedExercise in
                             var updated = updatedExercise
                             updated.id = exercises[index].id
-                            updated.order = index
                             exercises[index] = updated
                         },
                         existingExercise: exercises[index]
@@ -273,13 +268,7 @@ struct CreateWorkoutBookView: View {
         }
     }
     
-    // MARK: - Update Exercise Order
-    
-    private func updateExerciseOrder() {
-        for (index, _) in exercises.enumerated() {
-            exercises[index].order = index
-        }
-    }
+
     
     // MARK: - Error Handling
     
