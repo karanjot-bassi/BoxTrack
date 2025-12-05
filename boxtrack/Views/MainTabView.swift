@@ -36,7 +36,7 @@ struct MainTabView: View {
                 Color.clear
                     .tag(2)
                 
-                WorkoutBookView()
+                WorkoutBookListView()
                     .tag(3)
                 
                 SettingsView()
@@ -351,19 +351,7 @@ struct WorkoutHistoryCard: View {
     }
 }
 
-struct ProfileView: View {
-    var body: some View {
-        Text("Profile - Coming soon!")
-            .foregroundColor(.white)
-    }
-}
 
-struct WorkoutBookView: View {
-    var body: some View {
-        Text("Workout Book - Coming soon!")
-            .foregroundColor(.white)
-    }
-}
 
 struct SettingsView: View {
     var body: some View {

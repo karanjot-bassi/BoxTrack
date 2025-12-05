@@ -38,13 +38,35 @@ class WorkoutService {
     
     // Get users workouts sessions
     func getUserWorkoutSessions(userId: String, limit: Int = 20) async throws -> [WorkoutSession] {
+        print("🔍 Fetching workouts for user: \(userId)")
+        
         let snapshot = try await db.collection(workoutSessionsCollection)
             .whereField("userId", isEqualTo: userId)
-            .whereField("endTime", isNotEqualTo: NSNull())
-            .order(by: "endTime", descending: true)
+            .order(by: "date", descending: true)  // Changed from endTime to date
             .limit(to: limit)
             .getDocuments()
-        return snapshot.documents.compactMap { doc in try? doc.data(as: WorkoutSession.self)}
+        
+        print("📊 Found \(snapshot.documents.count) workout documents")
+        
+        let workouts = snapshot.documents.compactMap { doc -> WorkoutSession? in
+            do {
+                let workout = try doc.data(as: WorkoutSession.self)
+                // Only return completed workouts (those with endTime)
+                if workout.endTime != nil {
+                    print("✅ Loaded workout: \(workout.workoutBookName ?? "Freestyle"), duration: \(workout.duration ?? 0)")
+                    return workout
+                } else {
+                    print("⏭️ Skipping active workout (no endTime)")
+                    return nil
+                }
+            } catch {
+                print("❌ Error decoding workout: \(error)")
+                return nil
+            }
+        }
+        
+        print("✅ Returning \(workouts.count) completed workouts")
+        return workouts
     }
     
     // Get active workout session

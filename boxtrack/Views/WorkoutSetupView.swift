@@ -10,6 +10,12 @@ import FirebaseAuth
 struct WorkoutSetupView: View {
     @Environment(\.dismiss) var dismiss
     @Binding var showActiveWorkout: Bool
+    let preSelectedBook: WorkoutBook?
+    
+    init(showActiveWorkout: Binding<Bool>, preSelectedBook: WorkoutBook? = nil) {
+        self._showActiveWorkout = showActiveWorkout
+        self.preSelectedBook = preSelectedBook
+    }
     @StateObject private var viewModel = WorkoutSetupViewModel()
     @State private var selectedDate = Date()
     @State private var selectedWorkoutBook: WorkoutBook?
@@ -187,8 +193,14 @@ struct WorkoutSetupView: View {
             .onAppear {
                 Task {
                     await viewModel.loadData()
-                    // set default gym to hom gym after data loads
+                    // Set default gym to home gym after data loads
                     selectedGym = viewModel.homeGym ?? ""
+                    
+                    // If pre-selected book exists, use it
+                    if let preSelected = preSelectedBook {
+                        isFreestyle = false
+                        selectedWorkoutBook = preSelected
+                    }
                 }
             }
             .alert("Add New Gym", isPresented: $showAddGymSheet) {
