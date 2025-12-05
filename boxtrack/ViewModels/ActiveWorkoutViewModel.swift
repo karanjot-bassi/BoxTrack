@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import FirebaseAuth
 
 @MainActor
 class ActiveWorkoutViewModel: ObservableObject {
@@ -24,6 +25,7 @@ class ActiveWorkoutViewModel: ObservableObject {
     private var timer: Timer?
     
     private let workoutService = WorkoutService.shared
+    private let userService = UserService.shared
     
     // MARK: - Load Workout
     
@@ -126,7 +128,6 @@ class ActiveWorkoutViewModel: ObservableObject {
         exercises[index].completed = true
     }
     
-    // MARK: - Finish Workout
     
     func finishWorkout() async -> Bool {
         timer?.invalidate()
@@ -137,17 +138,34 @@ class ActiveWorkoutViewModel: ObservableObject {
             return false
         }
         
+        // Calculate total rounds from all exercises
+        let totalRounds = exercises.reduce(0) { $0 + $1.sets.count }
+        
         do {
-            // Save to Firebase
+            // 1. Save workout to Firebase (sets endTime, duration, exercises)
             try await workoutService.completeWorkoutSession(
                 sessionId: sessionId,
                 exercises: exercises
             )
             
-            // Clear active workout
+            // 2. Update basic user stats
+            guard let userId = AuthService.shared.currentUser?.uid else {
+                throw NSError(domain: "WorkoutViewModel", code: 3, userInfo: [NSLocalizedDescriptionKey: "No user ID"])
+            }
+            
+            var user = try await userService.getUser(userId: userId)
+            
+            // Just update counts - no streak logic
+            user.stats.totalWorkouts += 1
+            user.stats.totalRounds += totalRounds
+            user.stats.lastWorkoutDate = Date()
+            
+            try await userService.updateUser(user)
+            
+            // 3. Clear active workout
             UserDefaults.standard.removeObject(forKey: "activeWorkoutSessionId")
             
-            // Reset state
+            // 4. Reset local state
             exercises = []
             workoutDuration = "0:00"
             startTime = nil

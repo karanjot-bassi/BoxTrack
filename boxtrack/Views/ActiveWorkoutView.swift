@@ -13,6 +13,7 @@ struct ActiveWorkoutView: View {
     @State private var showAddExercise = false
     @State private var showBottomSheet = false
     @StateObject private var timerManager = BoxingTimerManager.shared
+    @State private var showWorkoutSummary = false
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -108,18 +109,40 @@ struct ActiveWorkoutView: View {
                     showAddExercise = true
                 },
                 onFinishWorkout: {
-                    // TODO: Finish workout
+                    showWorkoutSummary = true
                 },
                 onDeleteExercise: { index in
                     viewModel.deleteExercise(at: index)
                     if selectedExerciseIndex >= viewModel.exercises.count {
                         selectedExerciseIndex = max(0, viewModel.exercises.count - 1)
                     }
+                },
+                onDeleteWorkout: {
+                    Task {
+                        if await viewModel.deleteWorkout() {
+                            dismiss()
+                        }
+                    }
                 }
             )
         }
         .sheet(isPresented: $showAddExercise) {
             AddExerciseView(exercises: $viewModel.exercises)
+        }
+        .sheet(isPresented: $showWorkoutSummary) {
+            WorkoutSummaryView(
+                exercises: viewModel.exercises,
+                duration: viewModel.workoutDuration,
+                gym: nil, // We'll add gym tracking later
+                onConfirm: {
+                    Task {
+                        if await viewModel.finishWorkout() {
+                            showWorkoutSummary = false
+                            dismiss()
+                        }
+                    }
+                }
+            )
         }
         .onAppear {
             if !viewModel.hasLoadedWorkout {
@@ -315,6 +338,7 @@ struct BottomNavigationBar: View {
     let onAddExercise: () -> Void
     let onFinishWorkout: () -> Void
     let onDeleteExercise: (Int) -> Void
+    let onDeleteWorkout: () -> Void
     
     @State private var isExpanded = false
     @State private var showDeleteWorkoutAlert = false
@@ -500,7 +524,7 @@ struct BottomNavigationBar: View {
         .alert("Delete Workout", isPresented: $showDeleteWorkoutAlert) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
-                // TODO: Wire up delete workout
+                onDeleteWorkout()
             }
         } message: {
             Text("Are you sure you want to delete this entire workout? This cannot be undone.")

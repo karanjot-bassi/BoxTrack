@@ -18,6 +18,7 @@ struct MainTabView: View {
     @State private var showLogPrevious = false
     @State private var showActiveWorkout = false
     @State private var hasActiveWorkout = false
+    @State private var refreshHomeView = false
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -25,7 +26,7 @@ struct MainTabView: View {
             
             // Main Content
             TabView(selection: $selectedTab) {
-                HomeView()
+                HomeView(refreshTrigger: refreshHomeView)
                     .tag(0)
                 
                 ProfileView()
@@ -84,6 +85,7 @@ struct MainTabView: View {
             // When sheet closes (newValue = false), update button state
             if !newValue {
                 updateActiveWorkoutState()
+                refreshHomeView.toggle()
             }
         }
     }
@@ -199,6 +201,7 @@ struct HomeView: View {
     @StateObject private var timerManager = BoxingTimerManager.shared
     @State private var workoutHistory: [WorkoutSession] = []
     @State private var isLoadingHistory = true
+    let refreshTrigger: Bool
     
     var body: some View {
         ScrollView {
@@ -277,12 +280,31 @@ struct HomeView: View {
         .onAppear {
             loadWorkoutHistory()
         }
+        .onChange(of: refreshTrigger) { _, _ in
+            loadWorkoutHistory()
+        }
     }
     
     private func loadWorkoutHistory() {
-        // TODO: Load from Firebase later
-        // For now, just show empty state
-        isLoadingHistory = false
+        guard let userId = Auth.auth().currentUser?.uid else {
+            isLoadingHistory = false
+            return
+        }
+        
+        isLoadingHistory = true
+        
+        Task {
+            do {
+                workoutHistory = try await WorkoutService.shared.getUserWorkoutSessions(
+                    userId: userId,
+                    limit: 10
+                )
+            } catch {
+                print("Failed to load workout history: \(error)")
+                workoutHistory = []
+            }
+            isLoadingHistory = false
+        }
     }
 }
 
